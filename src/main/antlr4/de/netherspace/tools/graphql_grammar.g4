@@ -11,6 +11,7 @@ definition              : OPENINGCURLYBRACKET operationDefinition+ CLOSINGCURLYB
                         ;
 
 operationDefinition     : operationType name? variableDefinitions? directives? selectionSet
+                        | selectionSet
                         ;
 
 operationType           : SUBSCRIPTION
@@ -51,10 +52,42 @@ defaultValue            : EQUALSIGN value
 value                   : PLACEHOLDER // TODO: https://graphql.github.io/graphql-spec/June2018/#Value
                         ;
 
-directives              : ALLCHARS+ // TODO!
+directives              : PLACEHOLDER // TODO!
                         ;
 
-selectionSet            : ALLCHARS+ // TODO!
+selectionSet            : selection+
+                        ;
+
+selection               : field
+                        | fragmentSpread
+                        | inlineFragment
+                        ;
+
+field                   : alias? name arguments? directives? selectionSet?
+                        ;
+
+alias                   : name
+                        ;
+
+arguments               : argument+
+                        ;
+
+argument                : name COLON value
+                        ;
+
+fragmentSpread          : '...' fragmentName directives
+                        ;
+
+fragmentName            : name
+                        ;
+
+fragmentDefinition      : FRAGMENT fragmentName typeCondition directives? selectionSet
+                        ;
+
+inlineFragment          : '...' typeCondition? directives? selectionSet
+                        ;
+
+typeCondition           : ON namedType
                         ;
 
 
@@ -63,10 +96,16 @@ selectionSet            : ALLCHARS+ // TODO!
 SUBSCRIPTION            : 'subscription'
                         ;
 
+FRAGMENT                : 'fragment'
+                        ;
+
 MUTATION                : 'mutation'
                         ;
 
 QUERY                   : 'query'
+                        ;
+
+ON                      : 'ON'
                         ;
 
 OPENINGCURLYBRACKET     : '{'
