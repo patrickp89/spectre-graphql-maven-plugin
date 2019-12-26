@@ -7,7 +7,7 @@ document                : definition+
 
 
 // set of variables:
-definition              : OPENINGCURLYBRACKET operationDefinition+ CLOSINGCURLYBRACKET
+definition              : operationDefinition+
                         ;
 
 operationDefinition     : operationType name? variableDefinitions? directives? selectionSet
@@ -55,7 +55,7 @@ value                   : PLACEHOLDER // TODO: https://graphql.github.io/graphql
 directives              : PLACEHOLDER // TODO!
                         ;
 
-selectionSet            : selection+
+selectionSet            : OPENINGCURLYBRACKET selection+ CLOSINGCURLYBRACKET
                         ;
 
 selection               : field

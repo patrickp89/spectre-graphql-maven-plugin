@@ -14,6 +14,8 @@ public class GraphQlDocumentParser {
 
     private final Log log;
 
+    private graphql_grammarParser parser;
+
     public GraphQlDocumentParser(Log log) {
         this.log = log;
     }
@@ -26,16 +28,19 @@ public class GraphQlDocumentParser {
         final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
 
         // create the actual parser and AST:
-        final graphql_grammarParser parser = new graphql_grammarParser(tokenStream);
+        parser = new graphql_grammarParser(tokenStream);
         final graphql_grammarParser.DocumentContext parseTree = parser.document();
 
         // return the AST:
-        final String stringTree = parseTree.toStringTree(parser);
-        log.debug("Parse tree is: " + stringTree);
+        log.debug("Parse tree is: " + parseTreeToStringTree(parseTree));
         return parseTree;
     }
 
     public void walkGraphQlDocumentTree() {
         // TODO: final GraphQlDocumentVisitor graphQlDocumentVisitor = new GraphQlDocumentVisitor();
+    }
+
+    public String parseTreeToStringTree(graphql_grammarParser.DocumentContext parseTree) {
+        return parseTree.toStringTree(parser);
     }
 }
