@@ -1,7 +1,6 @@
 package de.netherspace.tools.spectre.parser
 
-import com.sun.codemodel.JCodeModel
-import com.sun.codemodel.JMod
+import com.sun.codemodel.*
 import de.netherspace.tools.spectre.parser.model.GraphQlIntrospectionResult
 import de.netherspace.tools.spectre.parser.model.GraphQlType
 import kotlinx.serialization.ImplicitReflectionSerializer
@@ -29,25 +28,66 @@ class GraphQlIntrospectionResultParser : BaseCodeModelWriter {
         val codeModel = JCodeModel()
         codeModel._package(packageName) // TODO: this does not work! why??
 
-        val className = graphQlIntrospectionResult.__type.name
-        logger.info("Creating new class: $className")
-        val clazz = codeModel._class(className)
+        val t = graphQlIntrospectionResult.data?.__type ?: (graphQlIntrospectionResult.__type!!)
+        // "name" can be null if "ofType" is given instead:
+        val className = t.name ?: (t.ofType?.name!!)
+        val clazz = createNewJClass(
+                codeModel = codeModel,
+                fullyqualifiedName = className
+        )
 
-        graphQlIntrospectionResult
-                .__type
-                .fields!!
+        (t.fields ?: listOf())
                 .asSequence()
-                .map { clazz.field(JMod.PUBLIC, mapType(it.type), it.name) }
-                .forEach { logger.debug("added field ${it.name()} with type ${it.type().name()}") }
+                .map { clazz.field(JMod.PUBLIC, mapType(it.type, codeModel), it.name) }
+                .forEach { logger.debug("added field '${it.name()}' with type ${it.type().name()}") }
 
         return codeModel
     }
 
-    private fun mapType(type: GraphQlType): Class<java.lang.String> {
-        return java.lang.String::class.java
-        // TODO: do a proper mapping isntead:
-        // TODO: String -> java.lang.String::class.java
-        // TODO: ...
-        // TODO: Date -> ...
+    private fun mapType(type: GraphQlType, codeModel: JCodeModel): JType {
+        val javaLangString = "java.lang.String"
+        val javaUtilDate = "java.util.Date"
+        val javaUtilList = "java.util.List"
+
+        logger.debug("Mapping $type to a Java type...") // TODO: <-- erase!
+        val typeName = type.name ?: type.ofType!!.name
+
+        // no type name in the outer object: is this a wrapper type (LIST or NON_NULL)?
+        if (typeName == null) {
+            val kind: String = type.kind ?: type.ofType!!.kind!!
+            return when (kind) {
+                "NON_NULL" -> mapType(type.ofType!!, codeModel)
+                "LIST" -> {
+                    val innerType = mapType(type.ofType!!, codeModel)
+                    val listType = jTypeForName(javaUtilList, codeModel)
+                    // TODO: add "innerType" as type parameter to listType!
+                    listType
+                }
+                else -> throw IllegalStateException("Unrecognized kind: $kind !")
+            }
+        }
+
+        return when (typeName) {
+            // these types map directly to Java platform types:
+            "String" -> jTypeForName(javaLangString, codeModel)
+            "Date" -> jTypeForName(javaUtilDate, codeModel)
+            "ID" -> jTypeForName(javaLangString, codeModel) // TODO: see https://graphql.org/learn/schema/#scalar-types
+
+            // all other types must explicitly be created:
+            else -> jTypeForName(typeName, codeModel)
+        }
+    }
+
+    private fun jTypeForName(fullyqualifiedName: String, codeModel: JCodeModel): JType {
+        val clazz: JDefinedClass? = codeModel._getClass(fullyqualifiedName)
+        return clazz ?: createNewJClass(
+                codeModel = codeModel,
+                fullyqualifiedName = fullyqualifiedName
+        )
+    }
+
+    private fun createNewJClass(fullyqualifiedName: String, codeModel: JCodeModel): JDefinedClass {
+        logger.debug("Creating new class: $fullyqualifiedName")
+        return codeModel._class(fullyqualifiedName, ClassType.CLASS)
     }
 }

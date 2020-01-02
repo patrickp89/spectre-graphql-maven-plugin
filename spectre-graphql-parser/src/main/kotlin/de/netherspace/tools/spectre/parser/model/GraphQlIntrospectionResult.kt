@@ -3,14 +3,23 @@ package de.netherspace.tools.spectre.parser.model
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class GraphQlIntrospectionResult(
+data class GraphQlIntrospectionResult( // TODO: use a sealed class instead!
+        // either, or:
+        var data: GraphQlWrapper? = null,
+        var __type: GraphQlType? = null
+)
+
+@Serializable
+data class GraphQlWrapper(
         val __type: GraphQlType
 )
 
 @Serializable
 data class GraphQlType(
-        val name: String,
-        var fields: List<GraphQlField>? = null
+        var name: String? = null, // "name" can be null if "ofType" is given instead!
+        var ofType: GraphQlType? = null,
+        var fields: List<GraphQlField>? = null,
+        var kind: String? = null
 )
 
 @Serializable

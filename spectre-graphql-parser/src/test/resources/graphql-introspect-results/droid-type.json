@@ -1,0 +1,81 @@
+{
+  "data": {
+    "__type": {
+      "name": "Droid",
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "name": null,
+            "kind": "NON_NULL",
+            "ofType": {
+              "name": "ID",
+              "kind": "SCALAR"
+            }
+          }
+        },
+        {
+          "name": "name",
+          "type": {
+            "name": null,
+            "kind": "NON_NULL",
+            "ofType": {
+              "name": "String",
+              "kind": "SCALAR"
+            }
+          }
+        },
+        {
+          "name": "friends",
+          "type": {
+            "name": null,
+            "kind": "LIST",
+            "ofType": {
+              "name": "Character",
+              "kind": "INTERFACE"
+            }
+          }
+        },
+        {
+          "name": "friendsConnection",
+          "type": {
+            "name": null,
+            "kind": "NON_NULL",
+            "ofType": {
+              "name": "FriendsConnection",
+              "kind": "OBJECT"
+            }
+          }
+        },
+        {
+          "name": "appearsIn",
+          "type": {
+            "name": null,
+            "kind": "NON_NULL",
+            "ofType": {
+              "name": null,
+              "kind": "LIST",
+              "ofType": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "primaryFunction",
+          "type": {
+            "name": "String",
+            "kind": "SCALAR",
+            "ofType": null
+          }
+        }
+      ]
+    }
+  }
+}

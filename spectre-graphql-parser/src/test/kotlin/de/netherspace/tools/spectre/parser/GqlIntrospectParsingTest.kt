@@ -7,6 +7,7 @@ import kotlinx.serialization.parse
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.not
 import org.hamcrest.Matchers.nullValue
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -35,12 +36,14 @@ class GqlIntrospectParsingTest {
 
         val introspectionResultParser = GraphQlIntrospectionResultParser()
         val gqlIntroResultObject = introspectionResultParser.unmarshalIntrospectionResult(introspectionResult)
-        assertThat(gqlIntroResultObject.__type.name, Is("User"))
-        assertThat(gqlIntroResultObject.__type.fields, Is(not(nullValue())))
-        assertThat(gqlIntroResultObject.__type.fields!!.isEmpty(), Is(false))
+        assertThat(gqlIntroResultObject.__type, Is(not(nullValue())))
+        assertThat(gqlIntroResultObject.data, Is(nullValue()))
+        assertThat(gqlIntroResultObject.__type!!.name, Is("User"))
 
+        assertThat(gqlIntroResultObject.__type!!.fields, Is(not(nullValue())))
+        assertThat(gqlIntroResultObject.__type!!.fields!!.isEmpty(), Is(false))
         val idFields = gqlIntroResultObject
-                .__type
+                .__type!!
                 .fields!!
                 .asSequence()
                 .filter { it.name == "id" }
@@ -66,6 +69,47 @@ class GqlIntrospectParsingTest {
         assertThat(genJavaFiles.size, Is(1))
         compareToExpectedClasses(genJavaFiles, "simple-introspec-test")
     }
+
+
+    @Test
+    @Ignore
+    fun testDroidExampleIntroResParsing() {
+        val introspectionResult = load("droid-type.json")
+        assertThat(introspectionResult, Is(not(nullValue())))
+
+        val introspectionResultParser = GraphQlIntrospectionResultParser()
+        val gqlIntroResultObject = introspectionResultParser.unmarshalIntrospectionResult(introspectionResult)
+        assertThat(gqlIntroResultObject.data, Is(not(nullValue())))
+        assertThat(gqlIntroResultObject.__type, Is(nullValue()))
+        assertThat(gqlIntroResultObject.data!!.__type.name, Is("Droid"))
+
+        assertThat(gqlIntroResultObject.data!!.__type.fields, Is(not(nullValue())))
+        assertThat(gqlIntroResultObject.data!!.__type.fields!!.isEmpty(), Is(false))
+        val pfFields = gqlIntroResultObject
+                .data!!
+                .__type
+                .fields!!
+                .asSequence()
+                .filter { it.name == "primaryFunction" }
+                .toList()
+        assertThat(pfFields.size, Is(1))
+        val pfField = pfFields.first()
+        assertThat(pfField.type.name, Is("String"))
+
+        val codeModel = introspectionResultParser.generateCodeModel(
+                graphQlIntrospectionResult = gqlIntroResultObject,
+                packageName = "de.test.package.sw"
+        )
+        // TODO: check field count on Droid class!
+
+        val genJavaFiles = introspectionResultParser.writeCodeModel(
+                codeModel = codeModel,
+                destFolder = temporaryFolder.newFolder()
+        )
+        assertThat(genJavaFiles.size, Is(3))
+        compareToExpectedClasses(genJavaFiles, "droid-example-test")
+    }
+
 
     /**
      * Compares the generated Java classes against expected ones.
