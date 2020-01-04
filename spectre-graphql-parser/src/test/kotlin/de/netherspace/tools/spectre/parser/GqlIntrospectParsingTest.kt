@@ -52,12 +52,13 @@ class GqlIntrospectParsingTest {
         val idField = idFields.first()
         assertThat(idField.type.name, Is("String"))
 
+        val packageName = "de.test.package.yeah"
         val codeModel = introspectionResultParser.generateCodeModel(
                 graphQlIntrospectionResult = gqlIntroResultObject,
-                packageName = "de.test.package.yeah"
+                packageName = packageName
         )
         val fieldCount = codeModel
-                ._getClass("User") // TODO: write extension function to get all classes
+                ._getClass("$packageName.User") // TODO: write extension function to get all classes
                 .fields()
                 .size
         assertThat(fieldCount, Is(not(0)))
@@ -116,6 +117,8 @@ class GqlIntrospectParsingTest {
      */
     private fun compareToExpectedClasses(genJavaFiles: List<File>, resourceFolderName: String) {
         val expFolder = "expectations/$resourceFolderName"
+        // TODO: Honor the package name as well! (There might be multiple generated classes,
+        // TODO: e.g. "User", in different packages.)
         val comparedClasses = genJavaFiles
                 .map { it.absoluteFile to it.name }
                 .map { it.first to load(expFolder, it.second) }

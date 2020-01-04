@@ -26,25 +26,25 @@ class GraphQlIntrospectionResultParser : BaseCodeModelWriter {
 
     fun generateCodeModel(graphQlIntrospectionResult: GraphQlIntrospectionResult, packageName: String): JCodeModel {
         val codeModel = JCodeModel()
-        codeModel._package(packageName) // TODO: this does not work! why??
-
         val t = graphQlIntrospectionResult.data?.__type ?: (graphQlIntrospectionResult.__type!!)
+
         // "name" can be null if "ofType" is given instead:
         val className = t.name ?: (t.ofType?.name!!)
         val clazz = createNewJClass(
                 codeModel = codeModel,
-                fullyqualifiedName = className
+                className = className,
+                packageName = packageName
         )
 
         (t.fields ?: listOf())
                 .asSequence()
-                .map { clazz.field(JMod.PUBLIC, mapType(it.type, codeModel), it.name) }
+                .map { clazz.field(JMod.PUBLIC, mapType(it.type, codeModel, packageName), it.name) }
                 .forEach { logger.debug("added field '${it.name()}' with type ${it.type().name()}") }
 
         return codeModel
     }
 
-    private fun mapType(type: GraphQlType, codeModel: JCodeModel): JType {
+    private fun mapType(type: GraphQlType, codeModel: JCodeModel, packageName: String): JType {
         val javaLangString = "java.lang.String"
         val javaUtilDate = "java.util.Date"
         val javaUtilList = "java.util.List"
@@ -56,12 +56,11 @@ class GraphQlIntrospectionResultParser : BaseCodeModelWriter {
         if (typeName == null) {
             val kind: String = type.kind ?: type.ofType!!.kind!!
             return when (kind) {
-                "NON_NULL" -> mapType(type.ofType!!, codeModel)
+                "NON_NULL" -> mapType(type.ofType!!, codeModel, packageName)
                 "LIST" -> {
-                    val innerType = mapType(type.ofType!!, codeModel)
-                    val listType = jTypeForName(javaUtilList, codeModel)
-                    // TODO: add "innerType" as type parameter to listType!
-                    listType
+                    val innerType = mapType(type.ofType!!, codeModel, packageName) as JClass
+                    val listType = jTypeForName(javaUtilList, codeModel, packageName) as JClass
+                    listType.narrow(innerType) // TODO: this works for List<String> but does NOT work for List<Character>!
                 }
                 else -> throw IllegalStateException("Unrecognized kind: $kind !")
             }
@@ -69,24 +68,42 @@ class GraphQlIntrospectionResultParser : BaseCodeModelWriter {
 
         return when (typeName) {
             // these types map directly to Java platform types:
-            "String" -> jTypeForName(javaLangString, codeModel)
-            "Date" -> jTypeForName(javaUtilDate, codeModel)
-            "ID" -> jTypeForName(javaLangString, codeModel) // TODO: see https://graphql.org/learn/schema/#scalar-types
+            "String" -> jTypeForName(javaLangString, codeModel, packageName)
+            "Date" -> jTypeForName(javaUtilDate, codeModel, packageName)
+            "ID" -> jTypeForName(javaLangString, codeModel, packageName) // TODO: see https://graphql.org/learn/schema/#scalar-types
 
             // all other types must explicitly be created:
-            else -> jTypeForName(typeName, codeModel)
+            else -> jTypeForName(typeName, codeModel, packageName)
         }
     }
 
-    private fun jTypeForName(fullyqualifiedName: String, codeModel: JCodeModel): JType {
-        val clazz: JDefinedClass? = codeModel._getClass(fullyqualifiedName)
-        return clazz ?: createNewJClass(
-                codeModel = codeModel,
-                fullyqualifiedName = fullyqualifiedName
-        )
+    private fun jTypeForName(className: String, codeModel: JCodeModel, packageName: String): JType {
+        return if (checkPackageBlacklist(className)) {
+            val clazz: JClass? = codeModel.ref(className)
+            clazz!!
+        } else {
+            val clazz: JDefinedClass? = codeModel._getClass(className)
+            clazz ?: createNewJClass(
+                    className = className,
+                    codeModel = codeModel,
+                    packageName = packageName
+            )
+        }
     }
 
-    private fun createNewJClass(fullyqualifiedName: String, codeModel: JCodeModel): JDefinedClass {
+    private fun checkPackageBlacklist(fullyQualifiedName: String): Boolean {
+        val packageBlacklist = listOf(
+                "java.util",
+                "java.lang"
+        )
+        return packageBlacklist
+                .map { fullyQualifiedName.startsWith(prefix = it, ignoreCase = true) }
+                .filter { it }
+                .count() > 0
+    }
+
+    private fun createNewJClass(className: String, codeModel: JCodeModel, packageName: String): JDefinedClass {
+        val fullyqualifiedName = "$packageName.$className"
         logger.debug("Creating new class: $fullyqualifiedName")
         return codeModel._class(fullyqualifiedName, ClassType.CLASS)
     }

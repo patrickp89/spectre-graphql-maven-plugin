@@ -1,3 +1,6 @@
+
+package de.test.package.yeah;
+
 import java.util.Date;
 
 public class User {

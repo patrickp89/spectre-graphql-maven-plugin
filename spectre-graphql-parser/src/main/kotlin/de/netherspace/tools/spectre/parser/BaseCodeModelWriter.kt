@@ -11,23 +11,6 @@ interface BaseCodeModelWriter {
         return destFolder
                 .walk()
                 .filter { it.name.endsWith(".java") }
-                .filter { !isPackageBlacklisted(it) }
                 .toList()
-    }
-
-    /**
-     * Checks if the given Java file lies in a blacklisted package.
-     *
-     * @return true if the class lies in a blacklisted package
-     */
-    private fun isPackageBlacklisted(file: File): Boolean {
-        val packageBlacklist = listOf(
-                "java/util",
-                "java/lang"
-        )
-        return packageBlacklist
-                .map { file.parent.endsWith(it) }
-                .filter { it }
-                .count() > 0
     }
 }
