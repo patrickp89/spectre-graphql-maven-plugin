@@ -1,3 +1,6 @@
+
+package de.test.package.sw;
+
 import java.util.List;
 
 public class Droid {

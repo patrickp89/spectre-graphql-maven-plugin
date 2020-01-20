@@ -50,30 +50,32 @@ class GraphQlIntrospectionResultParser : BaseCodeModelWriter {
         val javaUtilList = "java.util.List"
 
         logger.debug("Mapping $type to a Java type...") // TODO: <-- erase!
-        val typeName = type.name ?: type.ofType!!.name
+        val typeName: String? = type.name
 
-        // no type name in the outer object: is this a wrapper type (LIST or NON_NULL)?
-        if (typeName == null) {
-            val kind: String = type.kind ?: type.ofType!!.kind!!
-            return when (kind) {
+        // no type name in the outer object: is this a wrapper type (e.g. LIST or NON_NULL)?
+        return if (typeName == null) {
+            when (val kind: String = type.kind!!) {
                 "NON_NULL" -> mapType(type.ofType!!, codeModel, packageName)
                 "LIST" -> {
+                    logger.debug("\nrecursive call: mapType(${type.ofType!!} , ...)") // TODO: <-- erase!!!
                     val innerType = mapType(type.ofType!!, codeModel, packageName) as JClass
                     val listType = jTypeForName(javaUtilList, codeModel, packageName) as JClass
-                    listType.narrow(innerType) // TODO: this works for List<String> but does NOT work for List<Character>!
+                    logger.debug("I found a LIST type! The inner type is: ${innerType.fullName()}")
+                    listType.narrow(innerType)
                 }
+                "INTERFACE" -> throw IllegalStateException("INTER-FUCKING-FACE: $kind !") // TODO: we must ALWAYS check for the type (i.e. if it is an interface), even when typeName != null!
                 else -> throw IllegalStateException("Unrecognized kind: $kind !")
             }
-        }
+        } else {
+            when (typeName) {
+                // these types map directly to Java platform types:
+                "String" -> jTypeForName(javaLangString, codeModel, packageName)
+                "Date" -> jTypeForName(javaUtilDate, codeModel, packageName)
+                "ID" -> jTypeForName(javaLangString, codeModel, packageName) // TODO: see https://graphql.org/learn/schema/#scalar-types
 
-        return when (typeName) {
-            // these types map directly to Java platform types:
-            "String" -> jTypeForName(javaLangString, codeModel, packageName)
-            "Date" -> jTypeForName(javaUtilDate, codeModel, packageName)
-            "ID" -> jTypeForName(javaLangString, codeModel, packageName) // TODO: see https://graphql.org/learn/schema/#scalar-types
-
-            // all other types must explicitly be created:
-            else -> jTypeForName(typeName, codeModel, packageName)
+                // all other types must explicitly be created:
+                else -> jTypeForName(typeName, codeModel, packageName)
+            }
         }
     }
 
@@ -103,8 +105,19 @@ class GraphQlIntrospectionResultParser : BaseCodeModelWriter {
     }
 
     private fun createNewJClass(className: String, codeModel: JCodeModel, packageName: String): JDefinedClass {
-        val fullyqualifiedName = "$packageName.$className"
-        logger.debug("Creating new class: $fullyqualifiedName")
-        return codeModel._class(fullyqualifiedName, ClassType.CLASS)
+        val fullyQualifiedName = fullyQualifiedName(packageName = packageName, className = className)
+        logger.debug("Creating new class: $fullyQualifiedName")
+        return codeModel._class(fullyQualifiedName, ClassType.CLASS)
+    }
+
+    private fun fullyQualifiedName(clazz: JClass, packageName: String): Any {
+        return fullyQualifiedName(
+                className = clazz.name(),
+                packageName = packageName
+        )
+    }
+
+    private fun fullyQualifiedName(className: String, packageName: String): String {
+        return "$packageName.$className"
     }
 }

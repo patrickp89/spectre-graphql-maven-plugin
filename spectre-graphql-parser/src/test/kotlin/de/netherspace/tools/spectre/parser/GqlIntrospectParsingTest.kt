@@ -7,7 +7,6 @@ import kotlinx.serialization.parse
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.not
 import org.hamcrest.Matchers.nullValue
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -73,7 +72,6 @@ class GqlIntrospectParsingTest {
 
 
     @Test
-    @Ignore
     fun testDroidExampleIntroResParsing() {
         val introspectionResult = load("droid-type.json")
         assertThat(introspectionResult, Is(not(nullValue())))
