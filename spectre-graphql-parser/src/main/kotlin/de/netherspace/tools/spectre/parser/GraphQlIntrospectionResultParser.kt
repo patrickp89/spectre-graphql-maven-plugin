@@ -16,6 +16,22 @@ class GraphQlIntrospectionResultParser : BaseCodeModelWriter {
 
     private val logger = LoggerFactory.getLogger(GraphQlIntrospectionResultParser::class.java)
 
+    private val javaLangString = "java.lang.String"
+    private val javaLangBoolean = "java.lang.Boolean"
+    private val javaLangDouble = "java.lang.Double"
+    private val javaLangInteger = "java.lang.Integer"
+    private val javaUtilDate = "java.util.Date"
+    private val javaUtilList = "java.util.List"
+
+    private val blacklistedClassNamesToDefaultClasses = mapOf(
+            "String" to javaLangString,
+            "Boolean" to javaLangBoolean,
+            "Float" to javaLangDouble,
+            "Int" to javaLangInteger,
+            "Date" to javaUtilDate,
+            "ID" to javaLangString // TODO: see https://graphql.org/learn/schema/#scalar-types
+    )
+
     @UseExperimental(ImplicitReflectionSerializer::class)
     fun unmarshalIntrospectionResult(graphQlIntrospectionResult: InputStream): GraphQlIntrospectionResult {
         val jsonString: String = graphQlIntrospectionResult
@@ -26,29 +42,60 @@ class GraphQlIntrospectionResultParser : BaseCodeModelWriter {
 
     fun generateCodeModel(graphQlIntrospectionResult: GraphQlIntrospectionResult, packageName: String): JCodeModel {
         val codeModel = JCodeModel()
-        val t = graphQlIntrospectionResult.data?.__type ?: (graphQlIntrospectionResult.__type!!)
 
+        val schemaTypes = graphQlIntrospectionResult.data?.__schema?.types
+        return if (schemaTypes != null) { // TODO: use a "when", once this is a sealed class!
+            createClassesForTypes(
+                    types = schemaTypes,
+                    packageName = packageName,
+                    codeModel = codeModel
+            )
+            codeModel
+
+        } else {
+            val t = graphQlIntrospectionResult.data?.__type ?: (graphQlIntrospectionResult.__type!!)
+            createClassForType(
+                    gqlType = t,
+                    packageName = packageName,
+                    codeModel = codeModel
+            )
+            codeModel
+        }
+    }
+
+    private fun createClassesForTypes(types: List<GraphQlType>, packageName: String, codeModel: JCodeModel): List<JDefinedClass> {
+        return types
+                .asSequence()
+                .filter { !it.name!!.startsWith("__") } // skip "__xxx" types // TODO: the NPE check ("!!") is needed because "name | ofKind" is not a sum type yet!
+                .filter { it.name !in blacklistedClassNamesToDefaultClasses }
+                .map {
+                    createClassForType(
+                            gqlType = it,
+                            packageName = packageName,
+                            codeModel = codeModel
+                    )
+                }
+                .toList()
+    }
+
+    private fun createClassForType(gqlType: GraphQlType, packageName: String, codeModel: JCodeModel): JDefinedClass {
         // "name" can be null if "ofType" is given instead:
-        val className = t.name ?: (t.ofType?.name!!)
+        val className = gqlType.name ?: (gqlType.ofType?.name!!)
         val clazz = createNewJClass(
                 codeModel = codeModel,
                 className = className,
                 packageName = packageName
         )
 
-        (t.fields ?: listOf())
+        (gqlType.fields ?: listOf())
                 .asSequence()
                 .map { clazz.field(JMod.PUBLIC, mapType(it.type, codeModel, packageName), it.name) }
                 .forEach { logger.debug("added field '${it.name()}' with type ${it.type().name()}") }
 
-        return codeModel
+        return clazz
     }
 
     private fun mapType(type: GraphQlType, codeModel: JCodeModel, packageName: String): JType {
-        val javaLangString = "java.lang.String"
-        val javaUtilDate = "java.util.Date"
-        val javaUtilList = "java.util.List"
-
         logger.debug("Mapping $type to a Java type...") // TODO: <-- erase!
         val typeName: String? = type.name
 
@@ -67,15 +114,10 @@ class GraphQlIntrospectionResultParser : BaseCodeModelWriter {
                 else -> throw IllegalStateException("Unrecognized kind: $kind !")
             }
         } else {
-            when (typeName) {
-                // these types map directly to Java platform types:
-                "String" -> jTypeForName(javaLangString, codeModel, packageName)
-                "Date" -> jTypeForName(javaUtilDate, codeModel, packageName)
-                "ID" -> jTypeForName(javaLangString, codeModel, packageName) // TODO: see https://graphql.org/learn/schema/#scalar-types
-
-                // all other types must explicitly be created:
-                else -> jTypeForName(typeName, codeModel, packageName)
-            }
+            // some types map directly to Java platform types, all other types
+            // are explicitly created via their typeName:
+            val tn = blacklistedClassNamesToDefaultClasses[typeName] ?: typeName
+            jTypeForName(tn, codeModel, packageName)
         }
     }
 

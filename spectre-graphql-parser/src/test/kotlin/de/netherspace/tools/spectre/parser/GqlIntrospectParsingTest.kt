@@ -80,13 +80,17 @@ class GqlIntrospectParsingTest {
         val gqlIntroResultObject = introspectionResultParser.unmarshalIntrospectionResult(introspectionResult)
         assertThat(gqlIntroResultObject.data, Is(not(nullValue())))
         assertThat(gqlIntroResultObject.__type, Is(nullValue()))
-        assertThat(gqlIntroResultObject.data!!.__type.name, Is("Droid"))
 
-        assertThat(gqlIntroResultObject.data!!.__type.fields, Is(not(nullValue())))
-        assertThat(gqlIntroResultObject.data!!.__type.fields!!.isEmpty(), Is(false))
+        assertThat(gqlIntroResultObject.data!!.__type, Is(not(nullValue())))
+        assertThat(gqlIntroResultObject.data!!.__schema, Is(nullValue()))
+
+        assertThat(gqlIntroResultObject.data!!.__type!!.name, Is("Droid"))
+
+        assertThat(gqlIntroResultObject.data!!.__type!!.fields, Is(not(nullValue())))
+        assertThat(gqlIntroResultObject.data!!.__type!!.fields!!.isEmpty(), Is(false))
         val pfFields = gqlIntroResultObject
                 .data!!
-                .__type
+                .__type!!
                 .fields!!
                 .asSequence()
                 .filter { it.name == "primaryFunction" }
@@ -107,6 +111,40 @@ class GqlIntrospectParsingTest {
         )
         assertThat(genJavaFiles.size, Is(3))
         compareToExpectedClasses(genJavaFiles, "droid-example-test")
+    }
+
+
+    @Test
+    fun testStarWarsExampleIntroResParsing() {
+        val introspectionResult = load("starwars-intro-result.json")
+        assertThat(introspectionResult, Is(not(nullValue())))
+
+        val introspectionResultParser = GraphQlIntrospectionResultParser()
+        val gqlIntroResultObject = introspectionResultParser.unmarshalIntrospectionResult(introspectionResult)
+        assertThat(gqlIntroResultObject.data, Is(not(nullValue())))
+        assertThat(gqlIntroResultObject.__type, Is(nullValue()))
+
+        assertThat(gqlIntroResultObject.data!!.__type, Is(nullValue()))
+        assertThat(gqlIntroResultObject.data!!.__schema, Is(not(nullValue())))
+
+        assertThat(gqlIntroResultObject.data!!.__schema!!.types, Is(not(nullValue())))
+        assertThat(gqlIntroResultObject.data!!.__schema!!.types!!.size, Is(27))
+
+        // TODO: check the rest of the structure (of the deserialized gqlIntroResultObject)!
+
+        val codeModel = introspectionResultParser.generateCodeModel(
+                graphQlIntrospectionResult = gqlIntroResultObject,
+                packageName = "de.test.package.sw"
+        )
+
+        // TODO: check field count(s)!
+
+        val genJavaFiles = introspectionResultParser.writeCodeModel(
+                codeModel = codeModel,
+                destFolder = temporaryFolder.newFolder()
+        )
+        assertThat(genJavaFiles.size, Is(14))
+        compareToExpectedClasses(genJavaFiles, "starwars-types-only-test")
     }
 
 

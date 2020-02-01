@@ -1,0 +1,89 @@
+{
+  "data": {
+    "__schema": {
+      "types": [
+        {
+          "name": "Query"
+        },
+        {
+          "name": "Episode"
+        },
+        {
+          "name": "Character"
+        },
+        {
+          "name": "ID"
+        },
+        {
+          "name": "String"
+        },
+        {
+          "name": "Int"
+        },
+        {
+          "name": "FriendsConnection"
+        },
+        {
+          "name": "FriendsEdge"
+        },
+        {
+          "name": "PageInfo"
+        },
+        {
+          "name": "Boolean"
+        },
+        {
+          "name": "Review"
+        },
+        {
+          "name": "SearchResult"
+        },
+        {
+          "name": "Human"
+        },
+        {
+          "name": "LengthUnit"
+        },
+        {
+          "name": "Float"
+        },
+        {
+          "name": "Starship"
+        },
+        {
+          "name": "Droid"
+        },
+        {
+          "name": "Mutation"
+        },
+        {
+          "name": "ReviewInput"
+        },
+        {
+          "name": "__Schema"
+        },
+        {
+          "name": "__Type"
+        },
+        {
+          "name": "__TypeKind"
+        },
+        {
+          "name": "__Field"
+        },
+        {
+          "name": "__InputValue"
+        },
+        {
+          "name": "__EnumValue"
+        },
+        {
+          "name": "__Directive"
+        },
+        {
+          "name": "__DirectiveLocation"
+        }
+      ]
+    }
+  }
+}
