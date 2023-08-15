@@ -20,7 +20,7 @@
         <kotlin.version>1.6.0</kotlin.version>
         <antlr.version>4.7.2</antlr.version>
         <slf4j.version>1.7.29</slf4j.version>
-        <maven.plugin.version>3.6.3</maven.plugin.version>
+        <maven.plugin.version>3.8.1</maven.plugin.version>
         <maven.plugin-testing.version>3.3.0</maven.plugin-testing.version>
     </properties>
 
